@@ -1,5 +1,9 @@
 #import required modules
 import socket
+import hashlib
+
+#connection constants
+checksum_size = 4
 
 #class for a connection
 class Connection:
@@ -41,12 +45,37 @@ class Connection:
 
             #check if request for this user
             if self.user_id == data[:len(self.user_id)]:
-                request = data[len(self.user_id):]
+                check = data[len()]data[len(self.user_id):]
 
         #print connection request
         print(request)
 
     #connect to a listening user
     def connect(self, other_id):
+        #set connection user
+        self.other_id = other_id
+
         #send connection request
         self.server.sendto(other_id + b'hello world', self.address)
+
+    #pack and send packet
+    def send(self, msg):
+        #add message data to message
+        data = b'\x01\x02\x03'+ msg
+        self.server.sendto(self.other_id + self.checksum(data) + self.encrypt(data))
+
+    #encrypt the data
+    def encrypt(self, data):
+        return data
+
+    #decrypt the data
+    def decrypt(self, data):
+        return data
+
+    #calculate the checksum of bytes
+    def checksum(self, data):
+        #run checksum opperation
+        sha = hashlib.sha256()
+        sha.digest_size = checksum_size
+        sha.update(data)
+        return sha.digest()
