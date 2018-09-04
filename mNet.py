@@ -3,7 +3,8 @@ import socket
 import hashlib
 
 #connection constants
-checksum_size = 4
+checksum_size = 32
+message_count_size = 8
 
 #class for a connection
 class Connection:
@@ -28,6 +29,7 @@ class Connection:
         #try to leave the current group
         try:
             self.client.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_LEAVE_GROUP, self.mreq)
+        #do nothing if not in a group yet
         except AttributeError:
             pass
 
@@ -37,18 +39,8 @@ class Connection:
 
     #listen for connection
     def listen(self):
-        #get data that matches address
-        request = None
-        while request == None:
-            #get data from to parse
-            data, address = self.client.recvfrom(1024)
-
-            #check if request for this user
-            if self.user_id == data[:len(self.user_id)]:
-                check = data[len()]data[len(self.user_id):]
-
-        #print connection request
-        print(request)
+        #receive data addressed to connection
+        self.recv()
 
     #connect to a listening user
     def connect(self, other_id):
@@ -56,13 +48,38 @@ class Connection:
         self.other_id = other_id
 
         #send connection request
-        self.server.sendto(other_id + b'hello world', self.address)
+        self.send(b'hello world')
+
+    #unpack and receive packet
+    def recv(self):
+        #wait for message addressed to you
+        packet = None
+        while packet == None:
+            #get data to parse
+            raw, address = self.client.recvfrom(1024)
+            print(b'raw data: ' + raw)
+
+            #check if name matches
+            name = raw[:len(self.user_id)]
+            if name == self.user_id:
+                #check if data encoded correctly
+                check = raw[len(self.user_id):len(self.user_id)+checksum_size]
+                data = self.decrypt(raw[len(self.user_id)+checksum_size:])
+                if check == self.checksum(data):
+                    #check other things . . .
+                    packet = data
+            
+                    print(b'packet: ' + packet)
 
     #pack and send packet
     def send(self, msg):
         #add message data to message
-        data = b'\x01\x02\x03'+ msg
-        self.server.sendto(self.other_id + self.checksum(data) + self.encrypt(data))
+        data = b'' #empty packet
+        data += self.message_number.to_bytes(8, byteorder = 'big') #return address
+        data += self.mreq[:8]
+
+        #add unencrypted header
+        self.server.sendto(self.other_id + self.checksum(data) + self.encrypt(data), self.address)
 
     #encrypt the data
     def encrypt(self, data):
@@ -76,6 +93,5 @@ class Connection:
     def checksum(self, data):
         #run checksum opperation
         sha = hashlib.sha256()
-        sha.digest_size = checksum_size
         sha.update(data)
         return sha.digest()

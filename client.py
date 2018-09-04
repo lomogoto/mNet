@@ -3,3 +3,9 @@ import mNet
 
 c = mNet.Connection(b'Me')
 c.connect(b'Babe')
+c = mNet.Connection(b'Me')
+c.connect(b'Babe')
+c = mNet.Connection(b'Me')
+c.connect(b'Babe')
+c = mNet.Connection(b'Me')
+c.connect(b'babe')
